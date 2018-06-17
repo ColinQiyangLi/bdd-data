@@ -12,7 +12,7 @@ from matplotlib.font_manager import FontProperties
 from PIL import Image
 import sys
 
-from .label import labels
+from label import labels
 
 
 def parse_args():
@@ -207,6 +207,7 @@ class LabelViewer(object):
         self.instance_mode = False
         self.drivable_mode = False
         self.with_post = False  # with post processing
+        self.show_label = False
 
         if args.drivable:
             self.set_drivable_mode()
@@ -301,36 +302,37 @@ class LabelViewer(object):
                  [self.image_width - 1, 0, 'L']],
                 closed=True, alpha=1., color='black'))
 
-        # Read annotation labels
-        with open(label_path) as data_file:
-            label = json.load(data_file)
-        objects = label['frames'][0]['objects']
+        if self.show_label:
+            # Read annotation labels
+            with open(label_path) as data_file:
+                label = json.load(data_file)
+            objects = label['frames'][0]['objects']
+    
+            if len(self.target_objects) > 0:
+                objects = get_target_objects(objects, self.target_objects)
+                if len(objects) == 0:
+                    return False
 
-        if len(self.target_objects) > 0:
-            objects = get_target_objects(objects, self.target_objects)
-            if len(objects) == 0:
-                return False
+            if 'attributes' in label and self.with_attr:
+                attributes = label['attributes']
+                self.ax.text(
+                    25 * self.scale, 90 * self.scale,
+                    '  scene: {}\nweather: {}\n   time: {}'.format(
+                        attributes['scene'], attributes['weather'],
+                        attributes['timeofday']),
+                    fontproperties=self.font,
+                    color='red',
+                    bbox={'facecolor': 'white', 'alpha': 0.4, 'pad': 10, 'lw': 0})
 
-        if 'attributes' in label and self.with_attr:
-            attributes = label['attributes']
-            self.ax.text(
-                25 * self.scale, 90 * self.scale,
-                '  scene: {}\nweather: {}\n   time: {}'.format(
-                    attributes['scene'], attributes['weather'],
-                    attributes['timeofday']),
-                fontproperties=self.font,
-                color='red',
-                bbox={'facecolor': 'white', 'alpha': 0.4, 'pad': 10, 'lw': 0})
-
-        if self.with_drivable:
-            self.draw_drivable(objects)
-        if self.with_lane:
-            self.draw_lanes(objects)
-        if self.with_box2d:
-            [self.ax.add_patch(self.box2rect(b['box2d']))
-             for b in get_boxes(objects)]
-        if self.with_segment:
-            self.draw_segments(objects)
+            if self.with_drivable:
+                self.draw_drivable(objects)
+            if self.with_lane:
+                self.draw_lanes(objects)
+            if self.with_box2d:
+                [self.ax.add_patch(self.box2rect(b['box2d']))
+                 for b in get_boxes(objects)]
+            if self.with_segment:
+                self.draw_segments(objects)
         self.ax.axis('off')
         return True
 
@@ -339,6 +341,8 @@ class LabelViewer(object):
             self.current_index += 1
         elif event.key == 'p':
             self.current_index -= 1
+        elif event.key == 'd':
+            self.show_label = False if self.show_label else True
         else:
             return
         self.current_index = max(min(self.current_index,
