@@ -195,8 +195,6 @@ class LabelViewer(object):
 
         self.target_objects = args.target_objects
 
-        print(len(self.target_objects))
-
         self.out_dir = args.output_dir
         self.label_map = dict([(l.name, l) for l in labels])
         self.color_mode = 'random'
@@ -284,7 +282,7 @@ class LabelViewer(object):
         plt.cla()
         label_path = self.label_paths[self.current_index]
         name = splitext(split(label_path)[1])[0]
-        print('Image:', name)
+        print('Image: {} (n: next, p: previous, d: label toggle)'.format(name))
         self.fig.canvas.set_window_title(name)
 
         if self.with_image:
